@@ -10,6 +10,7 @@ from sendgrid.helpers.mail import (
     FileName,
     FileType,
     Mail,
+    ReplyTo,
 )
 
 
@@ -23,6 +24,9 @@ def _month_label(period_date: str) -> str:
         return dt.strftime("%B %Y")
     except Exception:
         return period_date
+
+
+INBOUND_EMAIL = "wkcomp@wkcomp.resortoutfitters.com"
 
 
 async def send_request_email(to_email: str, period_date: str):
@@ -46,6 +50,8 @@ async def send_request_email(to_email: str, period_date: str):
             f"Thank you"
         ),
     )
+    # Reply-To routes coordinator replies to the SendGrid inbound parse address
+    message.reply_to = ReplyTo(INBOUND_EMAIL)
 
     _sg_client().send(message)
     print(f"Request email sent to {to_email} for period {period_date}")

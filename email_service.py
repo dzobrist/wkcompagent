@@ -28,17 +28,16 @@ def _month_label(period_date: str) -> str:
 
 
 INBOUND_EMAIL = "wkcomp@wkcomp.resortoutfitters.com"
-AUTHENTICATED_FROM = "wkcomp@resortoutfitters.com"  # SendGrid authenticated domain
-FROM_EMAIL = os.getenv("FROM_EMAIL", AUTHENTICATED_FROM)
+# Must match the SendGrid authenticated domain — do not use the inbound subdomain
+AUTHENTICATED_FROM = "wkcomp@resortoutfitters.com"
 
 
 async def send_request_email(to_email: str, period_date: str):
     """Send the monthly payroll file request to the coordinator."""
     month_label = _month_label(period_date)
-    from_email = FROM_EMAIL
 
     message = Mail()
-    message.from_email = Email(from_email, "WK Comp Agent")
+    message.AUTHENTICATED_FROM = Email(AUTHENTICATED_FROM, "WK Comp Agent")
     message.reply_to = Email(INBOUND_EMAIL, "WK Comp Agent")
     message.to = To(to_email)
     message.subject = f"Workers Comp Payroll Report Request — {month_label}"
@@ -63,7 +62,6 @@ async def send_result_email(
 ):
     """Send the WC Premium Breakout PDF and the Applied Underwriters form to the coordinator."""
     month_label = _month_label(period_date)
-    from_email = FROM_EMAIL
 
     try:
         dt = datetime.strptime(period_date, "%m/%d/%Y")
@@ -81,7 +79,7 @@ async def send_result_email(
     )
 
     message = Mail(
-        from_email=from_email,
+        AUTHENTICATED_FROM=AUTHENTICATED_FROM,
         to_emails=to_email,
         subject=f"Workers Comp Reports Ready — {month_label}",
         plain_text_content=body,
@@ -110,8 +108,8 @@ async def send_result_email(
 async def send_error_email(to_email: str, period_date: str, error_detail: str):
     """Notify the coordinator that processing failed."""
     month_label = _month_label(period_date)
-    from_email = FROM_EMAIL
-    admin_email = os.getenv("ADMIN_EMAIL", from_email)
+    AUTHENTICATED_FROM = FROM_EMAIL
+    admin_email = os.getenv("ADMIN_EMAIL", AUTHENTICATED_FROM)
 
     body = (
         f"The Workers Comp agent could not process the payroll report for {month_label}.\n\n"
@@ -121,7 +119,7 @@ async def send_error_email(to_email: str, period_date: str, error_detail: str):
 
     for recipient in {to_email, admin_email}:
         message = Mail(
-            from_email=from_email,
+            AUTHENTICATED_FROM=AUTHENTICATED_FROM,
             to_emails=recipient,
             subject=f"WK Comp Agent Error — {month_label}",
             plain_text_content=body,

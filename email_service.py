@@ -9,7 +9,6 @@ from sendgrid.helpers.mail import (
     FileContent,
     FileName,
     FileType,
-    Header,
     Mail,
 )
 
@@ -40,18 +39,18 @@ async def send_request_email(to_email: str, period_date: str):
         subject=f"Workers Comp Payroll Report Request — {month_label}",
         plain_text_content=(
             f"Hi,\n\n"
-            f"Please reply to this email with the Earnings by Department payroll export for {month_label}.\n\n"
-            f"  - Log into the payroll system\n"
-            f"  - Run the Earnings by Department report\n"
-            f"  - Set check dates: full month of {month_label}\n"
-            f"  - Export as Excel (.xlsx)\n"
-            f"  - Reply to this email with the file attached\n\n"
+            f"It's time to run the Workers Comp payroll report for {month_label}.\n\n"
+            f"Please follow these steps:\n\n"
+            f"  1. Log into the payroll system\n"
+            f"  2. Run the Earnings by Department report\n"
+            f"  3. Set check dates: full month of {month_label}\n"
+            f"  4. Export as Excel (.xlsx)\n"
+            f"  5. Send a new email to {INBOUND_EMAIL} with the file attached\n\n"
+            f"IMPORTANT: Send to {INBOUND_EMAIL} — do not reply to this email.\n\n"
             f"Reporting period end date: {period_date}\n\n"
             f"Thank you"
         ),
     )
-    # Reply-To routes coordinator replies to the SendGrid inbound parse address
-    message.header = Header("Reply-To", INBOUND_EMAIL)
 
     _sg_client().send(message)
     print(f"Request email sent to {to_email} for period {period_date}")

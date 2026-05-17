@@ -11,7 +11,6 @@ from sendgrid.helpers.mail import (
     FileName,
     FileType,
     Mail,
-    To,
 )
 
 
@@ -36,22 +35,23 @@ async def send_request_email(to_email: str, period_date: str):
     """Send the monthly payroll file request to the coordinator."""
     month_label = _month_label(period_date)
 
-    message = Mail()
-    message.AUTHENTICATED_FROM = Email(AUTHENTICATED_FROM, "WK Comp Agent")
-    message.reply_to = Email(INBOUND_EMAIL, "WK Comp Agent")
-    message.to = To(to_email)
-    message.subject = f"Workers Comp Payroll Report Request — {month_label}"
-    message.plain_text_content = (
-        f"Hi,\n\n"
-        f"It's time to run the Workers Comp payroll report for {month_label}.\n\n"
-        f"  1. Log into the payroll system\n"
-        f"  2. Run the Earnings by Department report\n"
-        f"  3. Set check dates: full month of {month_label}\n"
-        f"  4. Export as Excel (.xlsx)\n"
-        f"  5. Reply to this email with the file attached\n\n"
-        f"Reporting period end date: {period_date}\n\n"
-        f"Thank you"
+    message = Mail(
+        from_email=AUTHENTICATED_FROM,
+        to_emails=to_email,
+        subject=f"Workers Comp Payroll Report Request — {month_label}",
+        plain_text_content=(
+            f"Hi,\n\n"
+            f"It's time to run the Workers Comp payroll report for {month_label}.\n\n"
+            f"  1. Log into the payroll system\n"
+            f"  2. Run the Earnings by Department report\n"
+            f"  3. Set check dates: full month of {month_label}\n"
+            f"  4. Export as Excel (.xlsx)\n"
+            f"  5. Reply to this email with the file attached\n\n"
+            f"Reporting period end date: {period_date}\n\n"
+            f"Thank you"
+        ),
     )
+    message.reply_to = Email(INBOUND_EMAIL)
 
     _sg_client().send(message)
     print(f"Request email sent to {to_email} for period {period_date}")

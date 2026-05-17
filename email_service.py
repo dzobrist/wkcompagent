@@ -24,25 +24,41 @@ def _sg_client() -> SendGridAPIClient:
     return SendGridAPIClient(os.getenv("SENDGRID_API_KEY"))
 
 
+def _claude(prompt: str, max_tokens: int = 150) -> str:
+    """Call Claude Haiku with a prompt and return the text response."""
+    client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+    response = client.messages.create(
+        model="claude-haiku-4-5",
+        max_tokens=max_tokens,
+        messages=[{"role": "user", "content": prompt}],
+    )
+    return response.content[0].text.strip()
+
+
 def _get_joke() -> str:
     """Ask Claude for a fresh payroll or HR joke."""
     try:
-        client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
-        response = client.messages.create(
-            model="claude-haiku-4-5",
-            max_tokens=100,
-            messages=[{
-                "role": "user",
-                "content": (
-                    "Give me one short, funny payroll or HR joke — a single punchline, "
-                    "no setup explanation, no commentary, just the joke itself. "
-                    "Keep it clean and workplace-appropriate."
-                ),
-            }],
+        return _claude(
+            "Give me one short, funny payroll or HR joke — a single punchline, "
+            "no setup explanation, no commentary, just the joke itself. "
+            "Keep it clean and workplace-appropriate."
         )
-        return response.content[0].text.strip()
     except Exception:
         return "Why did the payroll clerk quit? They just couldn't make ends meet."
+
+
+def _get_today_in_history() -> str:
+    """Ask Claude for a funny or surprising thing that happened on today's date in history."""
+    try:
+        today = datetime.now().strftime("%B %d")
+        return _claude(
+            f"What is one genuinely funny, strange, or surprising thing that happened on {today} "
+            f"in history? Give me just the fact itself — one or two sentences, no intro like "
+            f"'On this day' or 'Here is a fact'. Make it entertaining. Keep it workplace-appropriate.",
+            max_tokens=120,
+        )
+    except Exception:
+        return "History took the day off — probably a payroll error."
 
 
 def _month_label(period_date: str) -> str:
@@ -57,15 +73,22 @@ async def send_request_email(to_email: str, period_date: str):
     """Send the monthly payroll file request to the coordinator."""
     month_label = _month_label(period_date)
     joke = _get_joke()
+    history = _get_today_in_history()
+    today_label = datetime.now().strftime("%B %d")
 
     message = Mail(
         from_email=AUTHENTICATED_FROM,
         to_emails=to_email,
         subject=f"Workers Comp Payroll Report Request — {month_label}",
         plain_text_content=(
-            f"😄 {joke}\n\n"
+            f"******************************************\n"
+            f"*                                        *\n"
+            f"*         H E L L O  !  👋               *\n"
+            f"*                                        *\n"
+            f"******************************************\n\n"
+            f"😄 Joke of the day:\n{joke}\n\n"
+            f"📅 On this day ({today_label}) in history:\n{history}\n\n"
             f"---\n\n"
-            f"Hi,\n\n"
             f"It's time to run the Workers Comp payroll report for {month_label}.\n\n"
             f"  1. Log into the payroll system\n"
             f"  2. Run the Earnings by Department report\n"

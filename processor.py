@@ -7,6 +7,7 @@ import anthropic
 import openpyxl
 
 from email_service import send_error_email, send_result_email
+from report_generator import generate_pdf
 
 KNOWLEDGE_DIR = os.path.join(os.path.dirname(__file__), "knowledge")
 MAPPING_RULES_PATH = os.path.join(KNOWLEDGE_DIR, "Mapping_Rules.xlsx")
@@ -91,7 +92,14 @@ The mapping rules are provided below in four sections. Use them exactly as descr
 - Excluded Payroll = sum of all excluded contributions mapped to that code
 - Compensable Payroll = Gross − Excluded
 
-**Step 6.** Call the submit_payroll_report tool with your results. Include all 11 class codes in the class_codes array (use 0.0 for codes with no payroll). Include a full summary string matching the format below:
+**Step 6.** For Colorado CO9180 specifically, also track payroll by internal sub-group based on source department. The three sub-groups are:
+- **"Soaring Guides — Depts 15 & 20"**: all CO9180 earnings from departments whose names contain "15" or "20"
+- **"Outfitter Guides — Depts 9 & 21"**: all CO9180 earnings from departments whose names contain "9" or "21" (but NOT "19" — that is not a CO9180 sub-group)
+- **"Falconry - Broadmoor — Dept 18"**: all CO9180 earnings from departments whose names contain "18"
+
+Include these in the co9180_subgroups field of the tool call. The gross/excluded/compensable totals for all three sub-groups combined must equal the CO9180 totals in class_codes.
+
+**Step 7.** Call the submit_payroll_report tool with your results. Include all 11 class codes in the class_codes array (use 0.0 for codes with no payroll). Include a full summary string matching the format below:
 
 ```
 PAYROLL REPORT SUMMARY — [Month Year]
@@ -295,6 +303,20 @@ async def process_payroll(xlsx_bytes: bytes, period_date: str) -> tuple[bytes, s
                         "items": {"type": "string"},
                         "description": "Rows/earning entries not included in totals, with reasons",
                     },
+                    "co9180_subgroups": {
+                        "type": "array",
+                        "description": "Colorado CO9180 broken into three internal sub-groups",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "description": {"type": "string"},
+                                "gross": {"type": "number"},
+                                "excluded": {"type": "number"},
+                                "compensable": {"type": "number"},
+                            },
+                            "required": ["description", "gross", "excluded", "compensable"],
+                        },
+                    },
                     "data_quality_notes": {
                         "type": "array",
                         "items": {"type": "string"},
@@ -304,7 +326,7 @@ async def process_payroll(xlsx_bytes: bytes, period_date: str) -> tuple[bytes, s
                         "description": "Full summary text as specified in the system prompt",
                     },
                 },
-                "required": ["period_end", "class_codes", "summary"],
+                "required": ["period_end", "class_codes", "co9180_subgroups", "summary"],
             },
         }
     ]
@@ -349,7 +371,12 @@ async def process_payroll(xlsx_bytes: bytes, period_date: str) -> tuple[bytes, s
         raise ValueError("Claude did not return a payroll report. Check API logs.")
 
     form_bytes = _fill_form_template(tool_result["class_codes"], period_date)
-    return form_bytes, tool_result["summary"]
+    pdf_bytes = generate_pdf(
+        period_date=period_date,
+        class_codes=tool_result["class_codes"],
+        co9180_subgroups=tool_result.get("co9180_subgroups", []),
+    )
+    return form_bytes, pdf_bytes, tool_result["summary"]
 
 
 def _coordinator_emails() -> list[str]:
@@ -392,9 +419,9 @@ async def handle_inbound(payload: dict):
     print(f"Processing payroll for period ending {period_date}, file: {xlsx_filename}")
 
     try:
-        form_bytes, summary = await process_payroll(xlsx_bytes, period_date)
+        form_bytes, pdf_bytes, summary = await process_payroll(xlsx_bytes, period_date)
         for recipient in coordinators:
-            await send_result_email(recipient, period_date, form_bytes, summary)
+            await send_result_email(recipient, period_date, form_bytes, pdf_bytes, summary)
         print(f"Completed and emailed report for period {period_date} to {coordinators}")
     except Exception as exc:
         error_msg = f"Error processing payroll for period {period_date}:\n\n{exc}"

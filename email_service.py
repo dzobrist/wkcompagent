@@ -57,28 +57,24 @@ async def send_request_email(to_email: str, period_date: str):
     print(f"Request email sent to {to_email} for period {period_date}")
 
 
-async def send_result_email(to_email: str, period_date: str, form_bytes: bytes, summary: str):
-    """Send the completed Applied Underwriters form back to the coordinator."""
+async def send_result_email(
+    to_email: str, period_date: str, form_bytes: bytes, pdf_bytes: bytes, summary: str
+):
+    """Send the WC Premium Breakout PDF and the Applied Underwriters form to the coordinator."""
     month_label = _month_label(period_date)
     from_email = os.getenv("FROM_EMAIL", "wkcomp@resortoutfitters.com")
 
     try:
         dt = datetime.strptime(period_date, "%m/%d/%Y")
-        file_name = f"Payroll_Report_{dt.strftime('%B_%Y')}.xlsx"
+        month_str = dt.strftime("%B_%Y")
     except Exception:
-        file_name = "Payroll_Report.xlsx"
-
-    encoded = base64.b64encode(form_bytes).decode()
-    attachment = Attachment(
-        file_content=FileContent(encoded),
-        file_name=FileName(file_name),
-        file_type=FileType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
-        disposition=Disposition("attachment"),
-    )
+        month_str = "Report"
 
     body = (
-        f"Workers Comp Payroll Report for {month_label} is attached.\n\n"
-        f"Review the exceptions and overrides list before submitting to Applied Underwriters.\n\n"
+        f"Workers Comp reports for {month_label} are attached.\n\n"
+        f"  1. WC_Premium_Breakout_{month_str}.pdf — state-by-state breakout with estimated premiums\n"
+        f"  2. Payroll_Report_{month_str}.xlsx — Applied Underwriters carrier submission form\n\n"
+        f"Review the summary below before submitting the carrier form to Applied Underwriters.\n\n"
         f"{'=' * 60}\n\n"
         f"{summary}"
     )
@@ -86,13 +82,28 @@ async def send_result_email(to_email: str, period_date: str, form_bytes: bytes, 
     message = Mail(
         from_email=from_email,
         to_emails=to_email,
-        subject=f"Workers Comp Report Ready — {month_label}",
+        subject=f"Workers Comp Reports Ready — {month_label}",
         plain_text_content=body,
     )
-    message.attachment = attachment
+
+    # Attachment 1: PDF breakout report
+    message.attachment = Attachment(
+        file_content=FileContent(base64.b64encode(pdf_bytes).decode()),
+        file_name=FileName(f"WC_Premium_Breakout_{month_str}.pdf"),
+        file_type=FileType("application/pdf"),
+        disposition=Disposition("attachment"),
+    )
+
+    # Attachment 2: Applied Underwriters xlsx form
+    message.attachment = Attachment(
+        file_content=FileContent(base64.b64encode(form_bytes).decode()),
+        file_name=FileName(f"Payroll_Report_{month_str}.xlsx"),
+        file_type=FileType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
+        disposition=Disposition("attachment"),
+    )
 
     _sg_client().send(message)
-    print(f"Result email sent to {to_email} for period {period_date}")
+    print(f"Result email with 2 attachments sent to {to_email} for period {period_date}")
 
 
 async def send_error_email(to_email: str, period_date: str, error_detail: str):

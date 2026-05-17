@@ -9,8 +9,8 @@ from sendgrid.helpers.mail import (
     FileContent,
     FileName,
     FileType,
+    Header,
     Mail,
-    ReplyTo,
 )
 
 
@@ -51,7 +51,7 @@ async def send_request_email(to_email: str, period_date: str):
         ),
     )
     # Reply-To routes coordinator replies to the SendGrid inbound parse address
-    message.reply_to = ReplyTo(INBOUND_EMAIL)
+    message.header = Header("Reply-To", INBOUND_EMAIL)
 
     _sg_client().send(message)
     print(f"Request email sent to {to_email} for period {period_date}")

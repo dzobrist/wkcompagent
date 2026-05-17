@@ -73,8 +73,12 @@ def status():
 @app.post("/trigger")
 async def trigger():
     """Manually kick off the monthly payroll request email."""
-    await trigger_monthly()
-    return {"status": "triggered", "period": _last_month_end_str()}
+    import traceback
+    try:
+        await trigger_monthly()
+        return {"status": "triggered", "period": _last_month_end_str()}
+    except Exception as exc:
+        return JSONResponse(status_code=500, content={"error": str(exc), "detail": traceback.format_exc()})
 
 
 @app.post("/inbound")

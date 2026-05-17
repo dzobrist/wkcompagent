@@ -43,7 +43,7 @@ async def lifespan(app: FastAPI):
         day=trigger_day,
         hour=trigger_hour,
         minute=0,
-        timezone="America/New_York",
+        timezone="America/Denver",
     )
     scheduler.start()
     print(f"Scheduler started: fires on day {trigger_day} of each month at {trigger_hour}:00 ET")

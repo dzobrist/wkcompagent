@@ -51,8 +51,6 @@ async def send_request_email(to_email: str, period_date: str):
             f"Thank you"
         ),
     )
-    message.reply_to = Email(INBOUND_EMAIL)
-
     _sg_client().send(message)
     print(f"Request email sent to {to_email} for period {period_date}")
 

@@ -57,6 +57,17 @@ def health():
     return {"status": "ok", "service": "WK Comp Agent"}
 
 
+@app.get("/status")
+def status():
+    """Report which environment variables are configured (values redacted)."""
+    required = ["ANTHROPIC_API_KEY", "SENDGRID_API_KEY", "FROM_EMAIL", "COORDINATOR_EMAIL"]
+    optional = ["ADMIN_EMAIL", "TRIGGER_DAY", "TRIGGER_HOUR", "CLAUDE_MODEL"]
+    return {
+        "required": {k: "set" if os.getenv(k) else "MISSING" for k in required},
+        "optional": {k: os.getenv(k, "(not set)") if k not in ("ANTHROPIC_API_KEY", "SENDGRID_API_KEY") else ("set" if os.getenv(k) else "MISSING") for k in optional},
+    }
+
+
 @app.post("/trigger")
 async def trigger():
     """Manually kick off the monthly payroll request email."""

@@ -67,6 +67,7 @@ def status():
     return {
         "required": {k: "set" if os.getenv(k) else "MISSING" for k in required},
         "optional": {k: os.getenv(k, "(not set)") if k not in ("ANTHROPIC_API_KEY", "SENDGRID_API_KEY") else ("set" if os.getenv(k) else "MISSING") for k in optional},
+        "from_email_actual": os.getenv("FROM_EMAIL", "wkcomp@wkcomp.resortoutfitters.com"),
     }
 
 

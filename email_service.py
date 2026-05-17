@@ -51,7 +51,11 @@ async def send_request_email(to_email: str, period_date: str):
             f"Thank you"
         ),
     )
-    _sg_client().send(message)
+    # Set Reply-To directly in the request body (SDK property causes 400)
+    sg = _sg_client()
+    body = message.get()
+    body["reply_to"] = {"email": INBOUND_EMAIL}
+    sg.client.mail.send.post(request_body=body)
     print(f"Request email sent to {to_email} for period {period_date}")
 
 

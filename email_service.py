@@ -13,6 +13,11 @@ from sendgrid.helpers.mail import (
     Mail,
 )
 
+# Must be the SendGrid-authenticated domain
+AUTHENTICATED_FROM = "wkcomp@resortoutfitters.com"
+# Replies route here via the MX record → SendGrid inbound parse
+INBOUND_EMAIL = "wkcomp@wkcomp.resortoutfitters.com"
+
 
 def _sg_client() -> SendGridAPIClient:
     return SendGridAPIClient(os.getenv("SENDGRID_API_KEY"))
@@ -24,11 +29,6 @@ def _month_label(period_date: str) -> str:
         return dt.strftime("%B %Y")
     except Exception:
         return period_date
-
-
-INBOUND_EMAIL = "wkcomp@wkcomp.resortoutfitters.com"
-# Must match the SendGrid authenticated domain — do not use the inbound subdomain
-AUTHENTICATED_FROM = "wkcomp@resortoutfitters.com"
 
 
 async def send_request_email(to_email: str, period_date: str):
@@ -79,7 +79,7 @@ async def send_result_email(
     )
 
     message = Mail(
-        AUTHENTICATED_FROM=AUTHENTICATED_FROM,
+        from_email=AUTHENTICATED_FROM,
         to_emails=to_email,
         subject=f"Workers Comp Reports Ready — {month_label}",
         plain_text_content=body,
@@ -108,7 +108,6 @@ async def send_result_email(
 async def send_error_email(to_email: str, period_date: str, error_detail: str):
     """Notify the coordinator that processing failed."""
     month_label = _month_label(period_date)
-    AUTHENTICATED_FROM = FROM_EMAIL
     admin_email = os.getenv("ADMIN_EMAIL", AUTHENTICATED_FROM)
 
     body = (
@@ -119,7 +118,7 @@ async def send_error_email(to_email: str, period_date: str, error_detail: str):
 
     for recipient in {to_email, admin_email}:
         message = Mail(
-            AUTHENTICATED_FROM=AUTHENTICATED_FROM,
+            from_email=AUTHENTICATED_FROM,
             to_emails=recipient,
             subject=f"WK Comp Agent Error — {month_label}",
             plain_text_content=body,

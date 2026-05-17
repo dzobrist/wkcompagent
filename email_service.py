@@ -6,10 +6,12 @@ from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import (
     Attachment,
     Disposition,
+    Email,
     FileContent,
     FileName,
     FileType,
     Mail,
+    To,
 )
 
 
@@ -26,7 +28,8 @@ def _month_label(period_date: str) -> str:
 
 
 INBOUND_EMAIL = "wkcomp@wkcomp.resortoutfitters.com"
-FROM_EMAIL = os.getenv("FROM_EMAIL", INBOUND_EMAIL)
+AUTHENTICATED_FROM = "wkcomp@resortoutfitters.com"  # SendGrid authenticated domain
+FROM_EMAIL = os.getenv("FROM_EMAIL", AUTHENTICATED_FROM)
 
 
 async def send_request_email(to_email: str, period_date: str):
@@ -34,21 +37,21 @@ async def send_request_email(to_email: str, period_date: str):
     month_label = _month_label(period_date)
     from_email = FROM_EMAIL
 
-    message = Mail(
-        from_email=from_email,
-        to_emails=to_email,
-        subject=f"Workers Comp Payroll Report Request — {month_label}",
-        plain_text_content=(
-            f"Hi,\n\n"
-            f"It's time to run the Workers Comp payroll report for {month_label}.\n\n"
-            f"  1. Log into the payroll system\n"
-            f"  2. Run the Earnings by Department report\n"
-            f"  3. Set check dates: full month of {month_label}\n"
-            f"  4. Export as Excel (.xlsx)\n"
-            f"  5. Reply to this email with the file attached\n\n"
-            f"Reporting period end date: {period_date}\n\n"
-            f"Thank you"
-        ),
+    message = Mail()
+    message.from_email = Email(from_email, "WK Comp Agent")
+    message.reply_to = Email(INBOUND_EMAIL, "WK Comp Agent")
+    message.to = To(to_email)
+    message.subject = f"Workers Comp Payroll Report Request — {month_label}"
+    message.plain_text_content = (
+        f"Hi,\n\n"
+        f"It's time to run the Workers Comp payroll report for {month_label}.\n\n"
+        f"  1. Log into the payroll system\n"
+        f"  2. Run the Earnings by Department report\n"
+        f"  3. Set check dates: full month of {month_label}\n"
+        f"  4. Export as Excel (.xlsx)\n"
+        f"  5. Reply to this email with the file attached\n\n"
+        f"Reporting period end date: {period_date}\n\n"
+        f"Thank you"
     )
 
     _sg_client().send(message)

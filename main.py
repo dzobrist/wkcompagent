@@ -23,12 +23,14 @@ def _last_month_end_str() -> str:
 
 async def trigger_monthly():
     period = _last_month_end_str()
-    coordinator = os.getenv("COORDINATOR_EMAIL")
-    if not coordinator:
+    raw = os.getenv("COORDINATOR_EMAIL", "")
+    coordinators = [e.strip() for e in raw.split(",") if e.strip()]
+    if not coordinators:
         print("ERROR: COORDINATOR_EMAIL not set — cannot send request email")
         return
-    print(f"Sending payroll request email for period ending {period} to {coordinator}")
-    await send_request_email(coordinator, period)
+    print(f"Sending payroll request email for period ending {period} to {coordinators}")
+    for coordinator in coordinators:
+        await send_request_email(coordinator, period)
 
 
 @asynccontextmanager

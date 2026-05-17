@@ -352,12 +352,18 @@ async def process_payroll(xlsx_bytes: bytes, period_date: str) -> tuple[bytes, s
     return form_bytes, tool_result["summary"]
 
 
+def _coordinator_emails() -> list[str]:
+    """Return list of coordinator emails from comma-separated COORDINATOR_EMAIL env var."""
+    raw = os.getenv("COORDINATOR_EMAIL", "")
+    return [e.strip() for e in raw.split(",") if e.strip()]
+
+
 async def handle_inbound(payload: dict):
     """Orchestrate the full pipeline for an inbound coordinator email."""
-    coordinator_email = os.getenv("COORDINATOR_EMAIL", "")
-    from_email = payload.get("from_email", "")
+    coordinators = _coordinator_emails()
+    from_email = payload.get("from_email", "").lower()
 
-    if coordinator_email.lower() not in from_email.lower():
+    if not any(c.lower() in from_email for c in coordinators):
         print(f"Ignoring inbound email from unexpected sender: {from_email}")
         return
 
@@ -387,9 +393,11 @@ async def handle_inbound(payload: dict):
 
     try:
         form_bytes, summary = await process_payroll(xlsx_bytes, period_date)
-        await send_result_email(coordinator_email, period_date, form_bytes, summary)
-        print(f"Completed and emailed report for period {period_date}")
+        for recipient in coordinators:
+            await send_result_email(recipient, period_date, form_bytes, summary)
+        print(f"Completed and emailed report for period {period_date} to {coordinators}")
     except Exception as exc:
         error_msg = f"Error processing payroll for period {period_date}:\n\n{exc}"
         print(error_msg)
-        await send_error_email(coordinator_email, period_date, str(exc))
+        for recipient in coordinators:
+            await send_error_email(recipient, period_date, str(exc))

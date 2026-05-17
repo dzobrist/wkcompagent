@@ -2,6 +2,7 @@ import base64
 import os
 from datetime import datetime
 
+import anthropic
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import (
     Attachment,
@@ -23,6 +24,27 @@ def _sg_client() -> SendGridAPIClient:
     return SendGridAPIClient(os.getenv("SENDGRID_API_KEY"))
 
 
+def _get_joke() -> str:
+    """Ask Claude for a fresh payroll or HR joke."""
+    try:
+        client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+        response = client.messages.create(
+            model="claude-haiku-4-5",
+            max_tokens=100,
+            messages=[{
+                "role": "user",
+                "content": (
+                    "Give me one short, funny payroll or HR joke — a single punchline, "
+                    "no setup explanation, no commentary, just the joke itself. "
+                    "Keep it clean and workplace-appropriate."
+                ),
+            }],
+        )
+        return response.content[0].text.strip()
+    except Exception:
+        return "Why did the payroll clerk quit? They just couldn't make ends meet."
+
+
 def _month_label(period_date: str) -> str:
     try:
         dt = datetime.strptime(period_date, "%m/%d/%Y")
@@ -34,12 +56,15 @@ def _month_label(period_date: str) -> str:
 async def send_request_email(to_email: str, period_date: str):
     """Send the monthly payroll file request to the coordinator."""
     month_label = _month_label(period_date)
+    joke = _get_joke()
 
     message = Mail(
         from_email=AUTHENTICATED_FROM,
         to_emails=to_email,
         subject=f"Workers Comp Payroll Report Request — {month_label}",
         plain_text_content=(
+            f"😄 {joke}\n\n"
+            f"---\n\n"
             f"Hi,\n\n"
             f"It's time to run the Workers Comp payroll report for {month_label}.\n\n"
             f"  1. Log into the payroll system\n"
@@ -64,6 +89,7 @@ async def send_result_email(
 ):
     """Send the WC Premium Breakout PDF and the Applied Underwriters form to the coordinator."""
     month_label = _month_label(period_date)
+    joke = _get_joke()
 
     try:
         dt = datetime.strptime(period_date, "%m/%d/%Y")
@@ -72,6 +98,8 @@ async def send_result_email(
         month_str = "Report"
 
     body = (
+        f"😄 {joke}\n\n"
+        f"---\n\n"
         f"Workers Comp reports for {month_label} are attached.\n\n"
         f"  1. WC_Premium_Breakout_{month_str}.pdf — state-by-state breakout with estimated premiums\n"
         f"  2. Payroll_Report_{month_str}.xlsx — Applied Underwriters carrier submission form\n\n"
@@ -111,8 +139,11 @@ async def send_error_email(to_email: str, period_date: str, error_detail: str):
     """Notify the coordinator that processing failed."""
     month_label = _month_label(period_date)
     admin_email = os.getenv("ADMIN_EMAIL", AUTHENTICATED_FROM)
+    joke = _get_joke()
 
     body = (
+        f"😄 {joke}\n\n"
+        f"---\n\n"
         f"The Workers Comp agent could not process the payroll report for {month_label}.\n\n"
         f"Error details:\n{error_detail}\n\n"
         f"Please forward your payroll file to {admin_email} for manual processing."

@@ -1,0 +1,9 @@
+fastapi==0.115.0
+uvicorn==0.30.6
+sendgrid==6.11.0
+anthropic==0.40.0
+openpyxl==3.1.5
+apscheduler==3.10.4
+python-multipart==0.0.12
+python-dotenv==1.0.1
+httpx==0.27.2

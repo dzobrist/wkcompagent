@@ -1,6 +1,7 @@
+import calendar
 import os
 from contextlib import asynccontextmanager
-from datetime import date, timedelta
+from datetime import date
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from dotenv import load_dotenv
@@ -15,14 +16,14 @@ from processor import handle_inbound
 scheduler = AsyncIOScheduler()
 
 
-def _last_month_end_str() -> str:
+def _current_month_end_str() -> str:
     today = date.today()
-    last_day = today.replace(day=1) - timedelta(days=1)
-    return f"{last_day.month}/{last_day.day}/{last_day.year}"
+    last_day = calendar.monthrange(today.year, today.month)[1]
+    return f"{today.month}/{last_day}/{today.year}"
 
 
 async def trigger_monthly():
-    period = _last_month_end_str()
+    period = _current_month_end_str()
     raw = os.getenv("COORDINATOR_EMAIL", "")
     coordinators = [e.strip() for e in raw.split(",") if e.strip()]
     if not coordinators:
@@ -77,7 +78,7 @@ async def trigger():
     import traceback
     try:
         await trigger_monthly()
-        return {"status": "triggered", "period": _last_month_end_str()}
+        return {"status": "triggered", "period": _current_month_end_str()}
     except Exception as exc:
         return JSONResponse(status_code=500, content={"error": str(exc), "detail": traceback.format_exc()})
 

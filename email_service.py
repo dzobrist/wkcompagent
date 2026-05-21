@@ -79,7 +79,7 @@ async def send_request_email(to_email: str, period_date: str):
     message = Mail(
         from_email=AUTHENTICATED_FROM,
         to_emails=to_email,
-        subject=f"Workers Comp Payroll Report Request — {month_label}",
+        subject=f"Workers Comp Payroll Report Request — {month_label} [period:{period_date}]",
         plain_text_content=(
             f"******************************************\n"
             f"*                                        *\n"
@@ -95,9 +95,6 @@ async def send_request_email(to_email: str, period_date: str):
             f"  3. Set check dates: full month of {month_label}\n"
             f"  4. Export as Excel (.xlsx)\n"
             f"  5. Reply to this email with the file attached\n\n"
-            f"⚠️  IMPORTANT — please include this line in your reply so the reports\n"
-            f"    are dated correctly:\n\n"
-            f"    REPORTING PERIOD END DATE: {period_date}\n\n"
             f"Thank you"
         ),
     )

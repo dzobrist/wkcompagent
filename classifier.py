@@ -21,6 +21,11 @@ CO9180_SUBGROUP_DEPTS = {
     "Falconry - Broadmoor — Dept 18": {18},
 }
 
+# Depts 16 & 17 are classified as CO8810 on the carrier form but are tracked
+# separately here so the internal PDF can show them alongside the Soaring CO9180
+# rows for cost-allocation visibility.
+SOARING_CO8810_DEPTS = {16, 17}
+
 
 def _dept_num(dept: str) -> Optional[int]:
     m = re.match(r'^\s*(\d+)', dept)
@@ -204,6 +209,7 @@ def classify_payroll(payroll_ws, mapping_rules: dict) -> dict:
 
     totals = {code: {"gross": 0.0, "excluded": 0.0} for code in CLASS_CODE_ORDER}
     co9180_subs = {name: {"gross": 0.0, "excluded": 0.0} for name in CO9180_SUBGROUP_DEPTS}
+    soaring_co8810 = {"gross": 0.0, "excluded": 0.0}  # depts 16 & 17, internal visibility only
 
     overrides_applied = []
     exceptions = []
@@ -268,6 +274,11 @@ def classify_payroll(payroll_ws, mapping_rules: dict) -> dict:
                     co9180_subs[sg]["gross"] = round(co9180_subs[sg]["gross"] + amount, 2)
                     co9180_subs[sg]["excluded"] = round(co9180_subs[sg]["excluded"] + excl, 2)
 
+            # Track Soaring CO8810 (depts 16 & 17) for internal PDF visibility
+            if class_code == "CO8810" and _dept_num(dept) in SOARING_CO8810_DEPTS:
+                soaring_co8810["gross"] = round(soaring_co8810["gross"] + amount, 2)
+                soaring_co8810["excluded"] = round(soaring_co8810["excluded"] + excl, 2)
+
     # Build output
     class_codes = []
     for code in CLASS_CODE_ORDER:
@@ -284,11 +295,19 @@ def classify_payroll(payroll_ws, mapping_rules: dict) -> dict:
     total_gross = round(sum(c["gross"] for c in class_codes), 2)
     total_excl = round(sum(c["excluded"] for c in class_codes), 2)
 
+    sc = soaring_co8810
+    soaring_co8810_out = {
+        "gross": round(sc["gross"], 2),
+        "excluded": round(sc["excluded"], 2),
+        "compensable": round(sc["gross"] - sc["excluded"], 2),
+    }
+
     return {
         "rows_processed": len(rows),
         "earning_entries": earning_count,
         "class_codes": class_codes,
         "co9180_subgroups": co9180_subgroups,
+        "soaring_co8810": soaring_co8810_out,
         "totals": {"gross": total_gross, "excluded": total_excl, "compensable": round(total_gross - total_excl, 2)},
         "overrides_applied": overrides_applied,
         "exceptions": exceptions,

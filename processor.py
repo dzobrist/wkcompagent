@@ -161,6 +161,7 @@ async def process_payroll(xlsx_bytes: bytes, period_date: str) -> tuple[bytes, b
         period_date=period_date,
         class_codes=result["class_codes"],
         co9180_subgroups=result.get("co9180_subgroups", []),
+        soaring_co8810=result.get("soaring_co8810", {"gross": 0.0, "excluded": 0.0, "compensable": 0.0}),
     )
     summary = _build_summary(result, period_date)
     return form_bytes, pdf_bytes, summary

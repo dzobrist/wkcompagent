@@ -95,7 +95,9 @@ async def send_request_email(to_email: str, period_date: str):
             f"  3. Set check dates: full month of {month_label}\n"
             f"  4. Export as Excel (.xlsx)\n"
             f"  5. Reply to this email with the file attached\n\n"
-            f"Reporting period end date: {period_date}\n\n"
+            f"⚠️  IMPORTANT — please include this line in your reply so the reports\n"
+            f"    are dated correctly:\n\n"
+            f"    REPORTING PERIOD END DATE: {period_date}\n\n"
             f"Thank you"
         ),
     )

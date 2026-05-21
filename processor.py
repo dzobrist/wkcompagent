@@ -120,6 +120,13 @@ def _fill_form_template(class_codes: list[dict], period_date: str) -> bytes:
 
 
 def _extract_period_date(text: str) -> str | None:
+    # Prefer the labelled line the request email asks the coordinator to include
+    labelled = re.search(
+        r"REPORTING PERIOD END DATE[:\s]+(\d{1,2}/\d{1,2}/\d{4})", text, re.IGNORECASE
+    )
+    if labelled:
+        return labelled.group(1)
+    # Fall back to any m/d/yyyy date in the text
     match = re.search(r"\b(\d{1,2}/\d{1,2}/\d{4})\b", text)
     return match.group(1) if match else None
 

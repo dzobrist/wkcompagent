@@ -85,11 +85,22 @@ def _est_premium(compensable: float, rate: float) -> float:
     return round((compensable / 100) * rate, 2)
 
 
+def _dept_num_local(dept: str):
+    """Extract leading department number from dept string."""
+    import re as _re
+    m = _re.match(r'^\s*(\d+)', str(dept))
+    try:
+        return int(m.group(1)) if m else None
+    except (ValueError, AttributeError):
+        return None
+
+
 def generate_pdf(
     period_date: str,
     class_codes: list[dict],
     co9180_subgroups: list[dict],
     soaring_co8810: dict | None = None,
+    subgroup_detail: dict | None = None,
 ) -> bytes:
     """
     Generate the WC Premium Breakout PDF.
@@ -99,6 +110,7 @@ def generate_pdf(
         class_codes: list of {code, gross, excluded, compensable}
         co9180_subgroups: list of {description, gross, excluded, compensable}
         soaring_co8810: {gross, excluded, compensable} for depts 16 & 17 (internal visibility)
+        subgroup_detail: {dept: {employee: {gross, excluded, class_code}}} for employee-level PDF
     Returns:
         PDF as bytes
     """
@@ -147,7 +159,9 @@ def generate_pdf(
     TOTAL_BG = colors.HexColor("#dce6f0")
     GRAND_BG = colors.HexColor("#b8cfe0")
     ALT_ROW = colors.HexColor("#f4f7fb")
-    SOARING_CO8810_BG = colors.HexColor("#fffacd")  # yellow highlight — internal visibility row
+    SOARING_CO8810_BG = colors.HexColor("#fffacd")   # yellow — CO8810 soaring rows
+    SUBGROUP_HDR_BG = colors.HexColor("#2d5986")     # medium blue — subgroup headers
+    DEPT_HDR_BG = colors.HexColor("#e4edf7")         # very light blue — dept subheaders
 
     col_headers = ["Description", "Net Rate\n(per $100)", "Gross Payroll",
                    "Excluded Payroll", "Compensable\nPayroll", "Est. Premium"]
@@ -197,10 +211,10 @@ def generate_pdf(
     note = (
         "Estimated premium = (Compensable Payroll ÷ 100) × Net Rate. "
         "Compensable Payroll = Gross Payroll minus Excluded Payroll per WC reporting rules. "
-        "Colorado CO9180 is reported as a single class code on the carrier form; "
-        "sub-group detail is for internal reference only. "
-        "* Yellow row (Soaring Mgmt & Reservations) also appears on the CO8810 carrier line — "
-        "shown here for cost-allocation visibility only; not double-counted in the grand total."
+        "Colorado CO9180 sub-groups are for internal cost-allocation only — CO9180 is a single "
+        "line on the carrier form. "
+        "* Rows marked with asterisk (Depts 16 & 17) are reported under CO8810 on the carrier "
+        "form and appear here for Soaring cost visibility only — not double-counted in the grand total."
     )
     story.append(Paragraph(note, note_style))
 
@@ -220,69 +234,131 @@ def generate_pdf(
             cd = code_map.get(code, {"gross": 0.0, "excluded": 0.0, "compensable": 0.0})
 
             if entry.get("use_subgroups") and co9180_subgroups:
-                # ── Soaring section: CO9180 guides + CO8810 mgmt/reservations ──
-                soaring_9180_data = next(
-                    (s for s in co9180_subgroups if s["description"] == "Soaring Guides — Depts 15 & 20"),
-                    {"gross": 0.0, "excluded": 0.0, "compensable": 0.0}
-                )
-                sg_9180_g    = float(soaring_9180_data.get("gross", 0))
-                sg_9180_ex   = float(soaring_9180_data.get("excluded", 0))
-                sg_9180_comp = float(soaring_9180_data.get("compensable", 0))
+                # ── CO9180 subgroups with employee-level detail ──────────────
+                SUBGROUPS_DEF = [
+                    {
+                        "label": "Soaring Guides (incl. Reservations & Mgrs)",
+                        "co9180_depts": {15, 20},
+                        "co8810_depts": {16, 17},
+                    },
+                    {
+                        "label": "Outfitter Guides",
+                        "co9180_depts": {9, 21},
+                        "co8810_depts": set(),
+                    },
+                    {
+                        "label": "Falconry - Broadmoor",
+                        "co9180_depts": {18},
+                        "co8810_depts": set(),
+                    },
+                ]
 
-                sc = soaring_co8810 or {"gross": 0.0, "excluded": 0.0, "compensable": 0.0}
-                sg_8810_g    = float(sc.get("gross", 0))
-                sg_8810_ex   = float(sc.get("excluded", 0))
-                sg_8810_comp = float(sc.get("compensable", 0))
+                detail = subgroup_detail or {}
 
-                # Row 1 — Soaring Guides CO9180 (depts 15 & 20)
-                table_data.append(data_row("Soaring Guides — Depts 15 & 20 (CO9180)", "CO9180",
-                                           sg_9180_g, sg_9180_ex, sg_9180_comp))
-                data_row_count += 1
-
-                # Row 2 — Soaring Mgmt & Reservations CO8810 (depts 16 & 17) — yellow
-                soaring_8810_row_idx = len(table_data)
-                table_data.append(data_row(
-                    "Soaring Mgmt & Reservations — Depts 16 & 17 (CO8810)*",
-                    "CO8810", sg_8810_g, sg_8810_ex, sg_8810_comp
-                ))
-                row_styles.append(("BACKGROUND", (0, soaring_8810_row_idx),
-                                   (-1, soaring_8810_row_idx), SOARING_CO8810_BG))
-                data_row_count += 1
-
-                # Row 3 — Soaring Total rollup
-                soaring_total_row_idx = len(table_data)
-                soaring_tot_g    = round(sg_9180_g + sg_8810_g, 2)
-                soaring_tot_ex   = round(sg_9180_ex + sg_8810_ex, 2)
-                soaring_tot_comp = round(sg_9180_comp + sg_8810_comp, 2)
-                soaring_tot_prem = round(
-                    _est_premium(sg_9180_comp, NET_RATES["CO9180"]) +
-                    _est_premium(sg_8810_comp, NET_RATES["CO8810"]), 2
-                )
-                table_data.append([
-                    "  Soaring Total",
-                    "", _fmt_dollar(soaring_tot_g), _fmt_dollar(soaring_tot_ex),
-                    _fmt_dollar(soaring_tot_comp), _fmt_dollar(soaring_tot_prem),
-                ])
-                row_styles.append(("FONTNAME", (0, soaring_total_row_idx),
-                                   (-1, soaring_total_row_idx), "Helvetica-Bold"))
-                row_styles.append(("TEXTCOLOR", (0, soaring_total_row_idx),
-                                   (-1, soaring_total_row_idx), colors.HexColor("#1a3a5c")))
-                data_row_count += 1
-
-                # Remaining CO9180 sub-groups (Outfitter Guides, Falconry)
-                for sg in CO9180_SUBGROUPS_ORDER:
-                    if sg == "Soaring Guides — Depts 15 & 20":
-                        continue  # already rendered above
-                    sg_data = next((s for s in co9180_subgroups if s["description"] == sg),
-                                   {"gross": 0.0, "excluded": 0.0, "compensable": 0.0})
-                    g = float(sg_data.get("gross", 0))
-                    ex = float(sg_data.get("excluded", 0))
-                    comp = float(sg_data.get("compensable", 0))
-                    table_data.append(data_row(sg, code, g, ex, comp))
+                for sg_def in SUBGROUPS_DEF:
+                    # Subgroup header row
+                    sg_hdr_idx = len(table_data)
+                    table_data.append([sg_def["label"], "", "", "", "", ""])
+                    row_styles.extend([
+                        ("BACKGROUND", (0, sg_hdr_idx), (-1, sg_hdr_idx), SUBGROUP_HDR_BG),
+                        ("TEXTCOLOR", (0, sg_hdr_idx), (-1, sg_hdr_idx), colors.white),
+                        ("FONTNAME", (0, sg_hdr_idx), (-1, sg_hdr_idx), "Helvetica-Bold"),
+                    ])
                     data_row_count += 1
-                    if data_row_count % 2 == 0:
-                        row_styles.append(("BACKGROUND", (0, data_row_count),
-                                           (-1, data_row_count), ALT_ROW))
+
+                    sg_gross = sg_excluded = 0.0
+                    sg_co9180_comp = sg_co8810_comp = 0.0
+
+                    # CO9180 depts first, then CO8810 depts (yellow)
+                    all_sg_depts = (
+                        [(d, emp, False) for d, emp in sorted(detail.items())
+                         if _dept_num_local(d) in sg_def["co9180_depts"]] +
+                        [(d, emp, True) for d, emp in sorted(detail.items())
+                         if _dept_num_local(d) in sg_def["co8810_depts"]]
+                    )
+
+                    if all_sg_depts:
+                        for dept_name, employees, is_co8810 in all_sg_depts:
+                            rate = NET_RATES["CO8810"] if is_co8810 else NET_RATES["CO9180"]
+
+                            # Department subheader
+                            dept_hdr_idx = len(table_data)
+                            dept_label = f"  {dept_name}" + (" *" if is_co8810 else "")
+                            table_data.append([dept_label, "", "", "", "", ""])
+                            dept_bg = SOARING_CO8810_BG if is_co8810 else DEPT_HDR_BG
+                            row_styles.extend([
+                                ("BACKGROUND", (0, dept_hdr_idx), (-1, dept_hdr_idx), dept_bg),
+                                ("FONTNAME", (0, dept_hdr_idx), (-1, dept_hdr_idx), "Helvetica-Bold"),
+                                ("FONTSIZE", (0, dept_hdr_idx), (-1, dept_hdr_idx), 7.5),
+                            ])
+                            data_row_count += 1
+
+                            # Employee rows (alphabetical)
+                            for emp_name in sorted(employees.keys()):
+                                emp = employees[emp_name]
+                                eg = emp["gross"]
+                                eex = emp["excluded"]
+                                ecomp = round(eg - eex, 2)
+                                eprem = _est_premium(ecomp, rate)
+
+                                emp_row_idx = len(table_data)
+                                table_data.append([
+                                    f"    {emp_name}", f"{rate:.2f}",
+                                    _fmt_dollar(eg), _fmt_dollar(eex),
+                                    _fmt_dollar(ecomp), _fmt_dollar(eprem),
+                                ])
+                                if is_co8810:
+                                    row_styles.append((
+                                        "BACKGROUND", (0, emp_row_idx), (-1, emp_row_idx), SOARING_CO8810_BG
+                                    ))
+                                data_row_count += 1
+
+                                sg_gross += eg
+                                sg_excluded += eex
+                                if is_co8810:
+                                    sg_co8810_comp += ecomp
+                                else:
+                                    sg_co9180_comp += ecomp
+                    else:
+                        # No employee detail — fall back to subgroup totals
+                        sg_key = (
+                            "Soaring Guides — Depts 15 & 20"
+                            if "Soaring" in sg_def["label"]
+                            else next(
+                                (s for s in CO9180_SUBGROUPS_ORDER if sg_def["label"] in s),
+                                sg_def["label"]
+                            )
+                        )
+                        sg_data = next(
+                            (s for s in co9180_subgroups if s["description"] == sg_key),
+                            {"gross": 0.0, "excluded": 0.0, "compensable": 0.0}
+                        )
+                        sg_gross = float(sg_data.get("gross", 0))
+                        sg_excluded = float(sg_data.get("excluded", 0))
+                        sg_co9180_comp = float(sg_data.get("compensable", 0))
+                        if "Soaring" in sg_def["label"] and soaring_co8810:
+                            sc = soaring_co8810
+                            sg_gross += float(sc.get("gross", 0))
+                            sg_excluded += float(sc.get("excluded", 0))
+                            sg_co8810_comp = float(sc.get("compensable", 0))
+
+                    # Subgroup total row
+                    sg_tot_comp = round(sg_co9180_comp + sg_co8810_comp, 2)
+                    sg_tot_prem = round(
+                        _est_premium(sg_co9180_comp, NET_RATES["CO9180"]) +
+                        _est_premium(sg_co8810_comp, NET_RATES["CO8810"]), 2
+                    )
+                    sg_tot_idx = len(table_data)
+                    table_data.append([
+                        f"  {sg_def['label']} Total", "",
+                        _fmt_dollar(round(sg_gross, 2)), _fmt_dollar(round(sg_excluded, 2)),
+                        _fmt_dollar(sg_tot_comp), _fmt_dollar(sg_tot_prem),
+                    ])
+                    row_styles.extend([
+                        ("BACKGROUND", (0, sg_tot_idx), (-1, sg_tot_idx), TOTAL_BG),
+                        ("FONTNAME", (0, sg_tot_idx), (-1, sg_tot_idx), "Helvetica-Bold"),
+                    ])
+                    data_row_count += 1
             else:
                 g = float(cd.get("gross", 0))
                 ex = float(cd.get("excluded", 0))

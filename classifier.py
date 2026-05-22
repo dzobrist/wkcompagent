@@ -186,7 +186,7 @@ def extract_payroll_rows(ws) -> list[dict]:
         consecutive_blanks = 0
         dept = str(ws.cell(row=row_idx, column=2).value or "").strip()
         earnings = []
-        for slot in range(8):
+        for slot in range(9):  # 9 earning slots: C-F through AI-AL
             col = 3 + slot * 4
             earn_type = ws.cell(row=row_idx, column=col).value
             if earn_type:

@@ -22,7 +22,7 @@ from classifier import (
     load_mapping_rules,
 )
 from email_service import send_error_email, send_result_email
-from report_generator import generate_pdf
+from report_generator import generate_broadmoor_pdf, generate_pdf
 
 KNOWLEDGE_DIR = os.path.join(os.path.dirname(__file__), "knowledge")
 MAPPING_RULES_PATH = os.path.join(KNOWLEDGE_DIR, "Mapping_Rules.xlsx")
@@ -480,7 +480,7 @@ def _extract_period_date(text: str) -> str | None:
 
 # ── Main pipeline ─────────────────────────────────────────────────────────────
 
-async def process_payroll(xlsx_bytes: bytes, period_date: str) -> tuple[bytes, bytes, str]:
+async def process_payroll(xlsx_bytes: bytes, period_date: str) -> tuple[bytes, bytes, bytes, str]:
     """
     Claude classifies each payroll row (class code, overrides, exceptions).
     Python aggregates all dollar arithmetic from those decisions.
@@ -515,8 +515,14 @@ async def process_payroll(xlsx_bytes: bytes, period_date: str) -> tuple[bytes, b
         soaring_co8810=result.get("soaring_co8810"),
         subgroup_detail=result.get("subgroup_detail", {}),
     )
+    broadmoor_bytes = generate_broadmoor_pdf(
+        period_date=period_date,
+        subgroup_detail=result.get("subgroup_detail", {}),
+        soaring_co8810=result.get("soaring_co8810"),
+        co9180_subgroups=result.get("co9180_subgroups", []),
+    )
     summary = _build_summary(result, period_date)
-    return form_bytes, pdf_bytes, summary
+    return form_bytes, pdf_bytes, broadmoor_bytes, summary
 
 
 def _coordinator_emails() -> list[str]:
@@ -556,9 +562,9 @@ async def handle_inbound(payload: dict):
     print(f"Processing payroll for period ending {period_date}, file: {xlsx_filename}")
 
     try:
-        form_bytes, pdf_bytes, summary = await process_payroll(xlsx_bytes, period_date)
+        form_bytes, pdf_bytes, broadmoor_bytes, summary = await process_payroll(xlsx_bytes, period_date)
         for recipient in coordinators:
-            await send_result_email(recipient, period_date, form_bytes, pdf_bytes, summary)
+            await send_result_email(recipient, period_date, form_bytes, pdf_bytes, broadmoor_bytes, summary)
         print(f"Completed and emailed report for period {period_date} to {coordinators}")
     except Exception as exc:
         import traceback

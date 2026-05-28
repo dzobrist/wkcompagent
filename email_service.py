@@ -107,9 +107,10 @@ async def send_request_email(to_email: str, period_date: str):
 
 
 async def send_result_email(
-    to_email: str, period_date: str, form_bytes: bytes, pdf_bytes: bytes, summary: str
+    to_email: str, period_date: str,
+    form_bytes: bytes, pdf_bytes: bytes, broadmoor_bytes: bytes, summary: str
 ):
-    """Send the WC Premium Breakout PDF and the Applied Underwriters form to the coordinator."""
+    """Send all three WC reports to the coordinator."""
     month_label = _month_label(period_date)
     joke = _get_joke()
 
@@ -124,7 +125,8 @@ async def send_result_email(
         f"---\n\n"
         f"Workers Comp reports for {month_label} are attached.\n\n"
         f"  1. WC_Premium_Breakout_{month_str}.pdf — state-by-state breakout with estimated premiums\n"
-        f"  2. Payroll_Report_{month_str}.xlsx — Applied Underwriters carrier submission form\n\n"
+        f"  2. Broadmoor_Comp_Reimbursement_{month_str}.pdf — Soaring Adventure internal cost allocation\n"
+        f"  3. Payroll_Report_{month_str}.xlsx — Applied Underwriters carrier submission form\n\n"
         f"Review the summary below before submitting the carrier form to Applied Underwriters.\n\n"
         f"{'=' * 60}\n\n"
         f"{summary}"
@@ -137,7 +139,7 @@ async def send_result_email(
         plain_text_content=body,
     )
 
-    # Attachment 1: PDF breakout report
+    # Attachment 1: WC Premium Cost Breakout PDF
     message.attachment = Attachment(
         file_content=FileContent(base64.b64encode(pdf_bytes).decode()),
         file_name=FileName(f"WC_Premium_Breakout_{month_str}.pdf"),
@@ -145,7 +147,15 @@ async def send_result_email(
         disposition=Disposition("attachment"),
     )
 
-    # Attachment 2: Applied Underwriters xlsx form
+    # Attachment 2: Broadmoor Comp Reimbursement PDF
+    message.attachment = Attachment(
+        file_content=FileContent(base64.b64encode(broadmoor_bytes).decode()),
+        file_name=FileName(f"Broadmoor_Comp_Reimbursement_{month_str}.pdf"),
+        file_type=FileType("application/pdf"),
+        disposition=Disposition("attachment"),
+    )
+
+    # Attachment 3: Applied Underwriters xlsx form
     message.attachment = Attachment(
         file_content=FileContent(base64.b64encode(form_bytes).decode()),
         file_name=FileName(f"Payroll_Report_{month_str}.xlsx"),
@@ -154,7 +164,7 @@ async def send_result_email(
     )
 
     _sg_client().send(message)
-    print(f"Result email with 2 attachments sent to {to_email} for period {period_date}")
+    print(f"Result email with 3 attachments sent to {to_email} for period {period_date}")
 
 
 async def send_error_email(to_email: str, period_date: str, error_detail: str):

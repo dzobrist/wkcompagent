@@ -73,12 +73,23 @@ def status():
 
 
 @app.post("/trigger")
-async def trigger():
-    """Manually kick off the monthly payroll request email."""
+async def trigger(period: str | None = None):
+    """Manually kick off the monthly payroll request email.
+    Optional ?period=M/D/YYYY to override the reporting period (e.g. 6/30/2026).
+    """
     import traceback
     try:
-        await trigger_monthly()
-        return {"status": "triggered", "period": _current_month_end_str()}
+        if period:
+            raw = os.getenv("COORDINATOR_EMAIL", "")
+            coordinators = [e.strip() for e in raw.split(",") if e.strip()]
+            if not coordinators:
+                return JSONResponse(status_code=500, content={"error": "COORDINATOR_EMAIL not set"})
+            for coordinator in coordinators:
+                await send_request_email(coordinator, period)
+            return {"status": "triggered", "period": period}
+        else:
+            await trigger_monthly()
+            return {"status": "triggered", "period": _current_month_end_str()}
     except Exception as exc:
         return JSONResponse(status_code=500, content={"error": str(exc), "detail": traceback.format_exc()})
 

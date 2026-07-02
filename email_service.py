@@ -127,7 +127,8 @@ async def send_result_email(
         f"  1. WC_Premium_Breakout_{month_str}.pdf — state-by-state breakout with estimated premiums\n"
         f"  2. Broadmoor_Comp_Reimbursement_{month_str}.pdf — Soaring Adventure internal cost allocation\n"
         f"  3. Payroll_Report_{month_str}.xlsx — Applied Underwriters carrier submission form\n\n"
-        f"Review the summary below before submitting the carrier form to Applied Underwriters.\n\n"
+        f"Review the summary below before submitting the carrier form to Applied Underwriters. "
+        f"After the reports are verified, please submit to ecprdata@auw.com\n\n"
         f"{'=' * 60}\n\n"
         f"{summary}"
     )

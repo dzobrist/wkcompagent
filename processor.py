@@ -196,8 +196,8 @@ async def _classify_with_claude(payroll_rows: list[dict], period_date: str) -> d
     payroll_text = _payroll_rows_to_text(payroll_rows)
 
     response = await client.messages.create(
-        model=os.getenv("CLAUDE_MODEL", "claude-opus-4-5"),
-        max_tokens=16000,
+        model=os.getenv("CLAUDE_MODEL", "claude-opus-4-7"),
+        max_tokens=32000,
         system=[{
             "type": "text",
             "text": CLASSIFICATION_SYSTEM_PROMPT,
@@ -224,6 +224,13 @@ async def _classify_with_claude(payroll_rows: list[dict], period_date: str) -> d
             ],
         }],
     )
+
+    if response.stop_reason == "max_tokens":
+        raise ValueError(
+            "Classification response was truncated at the max_tokens limit — "
+            "the payroll file may be too large for a single pass. "
+            "Raise max_tokens in _classify_with_claude or split the file."
+        )
 
     for block in response.content:
         if block.type == "tool_use" and block.name == "submit_classification":

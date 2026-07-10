@@ -47,7 +47,7 @@ async def lifespan(app: FastAPI):
         timezone="America/Denver",
     )
     scheduler.start()
-    print(f"Scheduler started: fires on day {trigger_day} of each month at {trigger_hour}:00 ET")
+    print(f"Scheduler started: fires on day {trigger_day} of each month at {trigger_hour}:00 Mountain Time")
     yield
     scheduler.shutdown()
 
@@ -63,12 +63,13 @@ def health():
 @app.get("/status")
 def status():
     """Report which environment variables are configured (values redacted)."""
-    required = ["ANTHROPIC_API_KEY", "SENDGRID_API_KEY", "FROM_EMAIL", "COORDINATOR_EMAIL"]
+    required = ["ANTHROPIC_API_KEY", "SENDGRID_API_KEY", "COORDINATOR_EMAIL"]
     optional = ["ADMIN_EMAIL", "TRIGGER_DAY", "TRIGGER_HOUR", "CLAUDE_MODEL"]
+    from email_service import AUTHENTICATED_FROM
     return {
         "required": {k: "set" if os.getenv(k) else "MISSING" for k in required},
-        "optional": {k: os.getenv(k, "(not set)") if k not in ("ANTHROPIC_API_KEY", "SENDGRID_API_KEY") else ("set" if os.getenv(k) else "MISSING") for k in optional},
-        "from_email_actual": os.getenv("FROM_EMAIL", "wkcomp@wkcomp.resortoutfitters.com"),
+        "optional": {k: os.getenv(k) or "(not set)" for k in optional},
+        "from_email_actual": AUTHENTICATED_FROM,
     }
 
 

@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working in this
 Automated Workers' Compensation payroll reporting agent:
 1. On the 20th of each month at 8:00 AM Mountain Time, emails the payroll coordinator requesting that month's payroll file
 2. Receives the coordinator's reply (xlsx attachment) via SendGrid Inbound Parse webhook
-3. Classifies payroll rows using Claude (claude-opus-4-5), aggregates dollar amounts in Python
+3. Classifies payroll rows using Claude (claude-opus-4-7), aggregates dollar amounts in Python
 4. Produces three reports: a WC Premium Cost Breakout PDF, a Broadmoor Comp Reimbursement PDF, and an Applied Underwriters carrier form (xlsx)
 5. Emails both reports back to the coordinator
 
@@ -83,14 +83,15 @@ uvicorn main:app --reload
 Required:
 - `ANTHROPIC_API_KEY`
 - `SENDGRID_API_KEY`
-- `FROM_EMAIL` (must match SendGrid-authenticated domain)
 - `COORDINATOR_EMAIL` (comma-separated for multiple recipients)
 
 Optional:
-- `ADMIN_EMAIL` — receives error notifications
+- `ADMIN_EMAIL` — receives error notifications (falls back to the FROM address if unset or empty)
 - `TRIGGER_DAY` (default: 20)
 - `TRIGGER_HOUR` (default: 8)
-- `CLAUDE_MODEL` (default: claude-opus-4-5)
+- `CLAUDE_MODEL` (default: claude-opus-4-7)
+
+Note: the FROM address is hardcoded in `email_service.py` (`AUTHENTICATED_FROM`) because it must match the SendGrid-authenticated domain — the `FROM_EMAIL` env var is not read by the code.
 
 ## Knowledge Files
 

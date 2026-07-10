@@ -171,7 +171,9 @@ async def send_result_email(
 async def send_error_email(to_email: str, period_date: str, error_detail: str):
     """Notify the coordinator that processing failed."""
     month_label = _month_label(period_date)
-    admin_email = os.getenv("ADMIN_EMAIL", AUTHENTICATED_FROM)
+    # `or` fallback: Railway may set ADMIN_EMAIL to an empty string, which
+    # os.getenv's default would pass through — an empty recipient breaks the send
+    admin_email = os.getenv("ADMIN_EMAIL") or AUTHENTICATED_FROM
     joke = _get_joke()
 
     body = (

@@ -36,7 +36,7 @@ async def trigger_monthly():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    trigger_day = int(os.getenv("TRIGGER_DAY", "20"))
+    trigger_day = int(os.getenv("TRIGGER_DAY", "30"))
     trigger_hour = int(os.getenv("TRIGGER_HOUR", "8"))
     scheduler.add_job(
         trigger_monthly,

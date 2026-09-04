@@ -75,7 +75,7 @@ uvicorn main:app --reload
 - Result and error emails include a joke at the top
 
 ### Scheduler (`main.py`)
-- Cron: day 20, hour 8, `America/Denver` timezone
+- Cron: last day of each month, hour 8, `America/Denver` timezone
 - Override via env vars: `TRIGGER_DAY`, `TRIGGER_HOUR`
 
 ## Environment Variables
@@ -87,7 +87,7 @@ Required:
 
 Optional:
 - `ADMIN_EMAIL` — receives error notifications (falls back to the FROM address if unset or empty)
-- `TRIGGER_DAY` (default: 20)
+- `TRIGGER_DAY` (default: `last`) — a day number, or `last` for the final day of each month
 - `TRIGGER_HOUR` (default: 8)
 - `CLAUDE_MODEL` (default: claude-opus-4-7)
 

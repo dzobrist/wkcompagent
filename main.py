@@ -36,7 +36,10 @@ async def trigger_monthly():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    trigger_day = int(os.getenv("TRIGGER_DAY", "30"))
+    # TRIGGER_DAY may be a day number ("15") or "last" for the final day of
+    # each month (APScheduler cron supports "last", which handles Feb/30-day months).
+    raw_day = os.getenv("TRIGGER_DAY", "last").strip().lower()
+    trigger_day = "last" if raw_day == "last" else int(raw_day)
     trigger_hour = int(os.getenv("TRIGGER_HOUR", "8"))
     scheduler.add_job(
         trigger_monthly,
@@ -47,7 +50,8 @@ async def lifespan(app: FastAPI):
         timezone="America/Denver",
     )
     scheduler.start()
-    print(f"Scheduler started: fires on day {trigger_day} of each month at {trigger_hour}:00 Mountain Time")
+    day_label = "the last day" if trigger_day == "last" else f"day {trigger_day}"
+    print(f"Scheduler started: fires on {day_label} of each month at {trigger_hour}:00 Mountain Time")
     yield
     scheduler.shutdown()
 

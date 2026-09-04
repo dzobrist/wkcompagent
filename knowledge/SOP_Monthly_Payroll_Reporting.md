@@ -2,7 +2,7 @@
 ## Monthly Payroll Reporting — Applied Underwriters Workers' Compensation
 
 **Owner:** [Insert role/team name]
-**Frequency:** Monthly, due by the 30th of the month (previously the 20th)
+**Frequency:** Monthly, on the last day of the month (previously the 20th)
 **Estimated time per run:** 5 minutes
 **Last updated:** 2026-09-04
 
@@ -63,7 +63,7 @@ Claude will return **two downloadable files** plus a summary:
 
 ### Step 5 — File and submit
 
-Do this every month, by the 30th (the result email includes these same next steps):
+Do this every month when the reports come back (the result email includes these same next steps):
 
 1. Save the Excel file (Payroll_Report) and the GBO PDF report to the desktop folder: **All Insurance / Allied Wk Comp**
 2. Email the Excel file to: **ecprdata@auw.com**
@@ -161,7 +161,7 @@ This section is for the person responsible for keeping the Project current.
 **Annual review:** Verify policy period dates, producer name, named insured, the full set of class codes on the form against your current policy declarations, **the net rates used in the premium breakout PDF**, and every Employee Overrides row (especially Exclude rows — confirm each election is still active with the carrier; and department-specific Reassign rows — confirm the source department text still matches what payroll exports).
 
 **Change log:**
-- 2026-09-04: Monthly deadline moved from the 20th to the 30th (matches `TRIGGER_DAY` in `main.py`). Step 5 updated to the current filing steps (desktop folder location, AUW email address, SOA transfer to account #10100) — these already ship in the result email's "NEXT STEPS" section (`email_service.py`).
+- 2026-09-04: Request email now goes out on the last day of each month instead of the 20th (`TRIGGER_DAY=last`). Step 5 updated to the current filing steps (desktop folder location, AUW email address, SOA transfer to account #10100) — these already ship in the result email's "NEXT STEPS" section (`email_service.py`).
 
 ---
 

@@ -2,9 +2,9 @@
 ## Monthly Payroll Reporting — Applied Underwriters Workers' Compensation
 
 **Owner:** [Insert role/team name]
-**Frequency:** Monthly, within 7 days of period end
+**Frequency:** Monthly, due by the 30th of the month (previously the 20th)
 **Estimated time per run:** 5 minutes
-**Last updated:** May 2026
+**Last updated:** 2026-09-04
 
 ---
 
@@ -63,11 +63,12 @@ Claude will return **two downloadable files** plus a summary:
 
 ### Step 5 — File and submit
 
-1. Download both files
-2. Save the carrier form to: `[Insert shared drive path]\Payroll Reports\[YEAR]\[MONTH]_Payroll_Report.xlsx`
-3. Save the premium breakout to: `[Insert shared drive path]\Payroll Reports\[YEAR]\[MONTH]_WC_Premium_Breakout.pdf`
-4. Submit the carrier form to Applied Underwriters per current instructions: [Insert submission method]
-5. Confirm the submission in [Insert tracking system or log]
+Do this every month, by the 30th (the result email includes these same next steps):
+
+1. Save the Excel file (Payroll_Report) and the GBO PDF report to the desktop folder: **All Insurance / Allied Wk Comp**
+2. Email the Excel file to: **ecprdata@auw.com**
+3. Transfer the SOA (Statement of Account) amount to account **#10100**
+4. Confirm the submission in [Insert tracking system or log]
 
 ---
 
@@ -158,6 +159,9 @@ This section is for the person responsible for keeping the Project current.
 - **Policy rates change** (endorsement, renewal, audit adjustment) → update the rates used in the premium breakout PDF
 
 **Annual review:** Verify policy period dates, producer name, named insured, the full set of class codes on the form against your current policy declarations, **the net rates used in the premium breakout PDF**, and every Employee Overrides row (especially Exclude rows — confirm each election is still active with the carrier; and department-specific Reassign rows — confirm the source department text still matches what payroll exports).
+
+**Change log:**
+- 2026-09-04: Monthly deadline moved from the 20th to the 30th (matches `TRIGGER_DAY` in `main.py`). Step 5 updated to the current filing steps (desktop folder location, AUW email address, SOA transfer to account #10100) — these already ship in the result email's "NEXT STEPS" section (`email_service.py`).
 
 ---
 

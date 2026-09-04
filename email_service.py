@@ -16,6 +16,7 @@ from sendgrid.helpers.mail import (
 
 # Must be the SendGrid-authenticated domain
 AUTHENTICATED_FROM = "wkcomp@resortoutfitters.com"
+FROM_NAME = "Resort Outfitters WK Comp Agent"
 # Replies route here via the MX record → SendGrid inbound parse
 INBOUND_EMAIL = "wkcomp@wkcomp.resortoutfitters.com"
 
@@ -77,29 +78,27 @@ async def send_request_email(to_email: str, period_date: str):
     today_label = datetime.now().strftime("%B %d")
 
     message = Mail(
-        from_email=AUTHENTICATED_FROM,
+        from_email=Email(AUTHENTICATED_FROM, FROM_NAME),
         to_emails=to_email,
         subject=f"Workers Comp Payroll Report Request — {month_label} [period:{period_date}]",
         plain_text_content=(
-            f"******************************************\n"
-            f"*                                        *\n"
-            f"*         H E L L O  !  👋               *\n"
-            f"*                                        *\n"
-            f"******************************************\n\n"
-            f"😄 Joke of the day:\n{joke}\n\n"
-            f"📅 On this day ({today_label}) in history:\n{history}\n\n"
-            f"---\n\n"
-                    f"It's time to run the Workers Comp payroll report for {month_label}.\n\n"
-        f"  1. Log into the payroll system\n"
-        f"  2. Run the Earnings by Department report\n"
-        f"  3. Set check dates: full month of {month_label}\n"
-        f"  4. Export as Excel (.xlsx)\n"
-        f"  5. Reply to this email with the file attached\n\n"
-        f"Once the reports come back:\n\n"
-        f"  6. Save Excel file/GBO pdf report to desktop folder: All Insurance / Allied Wk Comp\n"
-        f"  7. Email the excel file to: ecprdata@auw.com\n"
-        f"  8. Transfer SOA amount to #10100\n\n"
-        f"Thank you"
+            f"Hello,\n\n"
+            f"It's time to run the Workers Comp payroll report for {month_label}.\n\n"
+            f"  1. Log into the payroll system\n"
+            f"  2. Run the Earnings by Department report\n"
+            f"  3. Set check dates: full month of {month_label}\n"
+            f"  4. Export as Excel (.xlsx)\n"
+            f"  5. Reply to this email with the file attached\n\n"
+            f"Once the reports come back:\n\n"
+            f"  6. Save Excel file/GBO pdf report to desktop folder: All Insurance / Allied Wk Comp\n"
+            f"  7. Email the excel file to: ecprdata@auw.com\n"
+            f"  8. Transfer SOA amount to #10100\n\n"
+            f"Thank you\n\n"
+            f"---\n"
+            f"Joke of the day: {joke}\n\n"
+            f"On this day ({today_label}) in history: {history}\n\n"
+            f"This is an automated monthly message from the Resort Outfitters Workers Comp "
+            f"reporting agent. Replies to this email go directly to the agent.\n"
         ),
     )
     # Set Reply-To directly in the request body (SDK property causes 400)
@@ -125,8 +124,7 @@ async def send_result_email(
         month_str = "Report"
 
     body = (
-        f"😄 {joke}\n\n"
-        f"---\n\n"
+        f"Hello,\n\n"
         f"Workers Comp reports for {month_label} are attached.\n\n"
         f"  1. WC_Premium_Breakout_{month_str}.pdf — state-by-state breakout with estimated premiums\n"
         f"  2. Broadmoor_Comp_Reimbursement_{month_str}.pdf — Soaring Adventure internal cost allocation\n"
@@ -137,11 +135,13 @@ async def send_result_email(
         f"  2) Email the Excel file to: ecprdata@auw.com\n\n"
         f"  3) Transfer the SOA amount to #10100.\n\n"
         f"{'=' * 60}\n\n"
-        f"{summary}"
+        f"{summary}\n\n"
+        f"---\n"
+        f"Joke of the day: {joke}\n"
     )
 
     message = Mail(
-        from_email=AUTHENTICATED_FROM,
+        from_email=Email(AUTHENTICATED_FROM, FROM_NAME),
         to_emails=to_email,
         subject=f"Workers Comp Reports Ready — {month_label}",
         plain_text_content=body,
@@ -184,16 +184,17 @@ async def send_error_email(to_email: str, period_date: str, error_detail: str):
     joke = _get_joke()
 
     body = (
-        f"😄 {joke}\n\n"
-        f"---\n\n"
+        f"Hello,\n\n"
         f"The Workers Comp agent could not process the payroll report for {month_label}.\n\n"
         f"Error details:\n{error_detail}\n\n"
-        f"Please forward your payroll file to {admin_email} for manual processing."
+        f"Please forward your payroll file to {admin_email} for manual processing.\n\n"
+        f"---\n"
+        f"Joke of the day: {joke}\n"
     )
 
     for recipient in {to_email, admin_email}:
         message = Mail(
-            from_email=AUTHENTICATED_FROM,
+            from_email=Email(AUTHENTICATED_FROM, FROM_NAME),
             to_emails=recipient,
             subject=f"WK Comp Agent Error — {month_label}",
             plain_text_content=body,
